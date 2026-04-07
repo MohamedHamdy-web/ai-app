@@ -9,6 +9,7 @@ import ToolSelector from "@/components/ToolSelector";
 import { useHistory } from "@/lib/useHistory";
 import History from "@/components/History";
 import Layout from "@/components/Layout";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const { history, addToHistory } = useHistory();
@@ -40,23 +41,35 @@ export default function Home() {
     setLoading(false);
   };
 
+  const handleSelectHistory = (item: { prompt: string; result: string }) => {
+    setResult(item.result);
+  };
+
   return (
-    <Layout sidebar={<History history={history} />}>
-      <Navbar />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Layout
+        sidebar={<History history={history} onSelect={handleSelectHistory} />}
+      >
+        <Navbar />
 
-      <h1 className="text-4xl font-bold mt-6 mb-6 text-center">
-        AI Content Generator
-      </h1>
+        <h1 className="text-4xl font-bold mt-6 mb-6 text-center">
+          AI Content Generator
+        </h1>
 
-      <ToolSelector
-        tools={tools}
-        activeTool={activeTool}
-        setActiveTool={setActiveTool}
-      />
+        <ToolSelector
+          tools={tools}
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+        />
 
-      <PromptBox onGenerate={handleGenerate} />
+        <PromptBox onGenerate={handleGenerate} />
 
-      <ResultBox result={result} loading={loading} />
-    </Layout>
+        <ResultBox result={result} loading={loading} activeTool={activeTool} />
+      </Layout>
+    </motion.div>
   );
 }

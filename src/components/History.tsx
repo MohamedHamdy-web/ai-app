@@ -1,23 +1,33 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 type Item = {
   prompt: string;
   result: string;
 };
 
-export default function History({ history }: { history: Item[] }) {
+type Props = {
+  history: Item[];
+  onSelect: (item: Item) => void;
+};
+
+export default function History({ history, onSelect }: Props) {
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">History</h2>
+      <h2 className="text-lg font-semibold mb-6">History</h2>
 
       <div className="space-y-3">
         {history.map((item, i) => (
-          <div
+          <motion.div
             key={i}
-            className="p-3 border border-gray-800 rounded-lg cursor-pointer hover:bg-gray-900 transition"
+            onClick={() => onSelect(item)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="p-4 rounded-xl text-black cursor-pointer border transition bg-gray-400 hover:bg-gray-200"
           >
-            <p className="text-sm text-gray-400 truncate">{item.prompt}</p>
-          </div>
+            <p className="text-sm font-medium truncate">{item.prompt}</p>
+          </motion.div>
         ))}
       </div>
     </div>

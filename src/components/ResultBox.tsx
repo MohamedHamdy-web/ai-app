@@ -1,64 +1,113 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
+import { motion } from "framer-motion";
 
 type Props = {
   result: string;
   loading: boolean;
 };
 
+// 🔥 Split text + code blocks
+function parseContent(text: string) {
+  const parts = text.split(/```/);
+
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return { type: "code", content: part };
+    }
+    return { type: "text", content: part };
+  });
+}
+
 export default function ResultBox({ result, loading }: Props) {
+  const [displayedText, setDisplayedText] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  // ✨ Streaming effect
+  useEffect(() => {
     if (!result) return;
+
+    let i = 0;
+    setDisplayedText("");
+
+    const interval = setInterval(() => {
+      setDisplayedText((prev) => prev + result.charAt(i));
+      i++;
+
+      if (i >= result.length) clearInterval(interval);
+    }, 10);
+
+    return () => clearInterval(interval);
+  }, [result]);
+
+  const handleCopy = () => {
     navigator.clipboard.writeText(result);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="mt-8 p-6 border border-gray-800 rounded-xl min-h-37.5 relative">
+    <motion.div
+      className="mt-8 p-6 border rounded-xl min-h-37.5"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
       {/* 🔄 Loading */}
       {loading && (
         <div className="animate-pulse space-y-2">
-          <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-          <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+          <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-300 rounded w-2/3"></div>
         </div>
       )}
 
       {/* ✅ Result */}
-      {!loading && result && (
-        <div className="relative">
-          {/* 📋 Copy Button (Top Right) */}
-          <button
-            onClick={handleCopy}
-            className="absolute top-0 right-0 p-2 rounded-lg hover:bg-gray-800 transition"
-          >
-            <Copy size={18} />
-          </button>
+      {!loading && displayedText && (
+        <motion.div
+          key={result}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {/* 📋 Copy Button */}
+          <div className="flex justify-end mb-2">
+            {/* ✅ Copied Feedback */}
+            {copied && (
+              <span className="text-green-500 text-xs ml-2">Copied!</span>
+            )}
+            <button
+              onClick={handleCopy}
+              className="p-2 rounded-lg hover:bg-gray-200 transition"
+            >
+              <Copy size={18} />
+            </button>
+          </div>
 
-          {/* 🧠 Result Content */}
-          {result.includes("```") ? (
-            <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm mt-6">
-              <code>{result}</code>
-            </pre>
-          ) : (
-            <p className="text-gray-300 whitespace-pre-line leading-relaxed pt-8">
-              {result}
-            </p>
-          )}
+          {/* 🧠 Parsed Content */}
+          <div className="space-y-3">
+            {parseContent(displayedText).map((block, i) =>
+              block.type === "code" ? (
+                <div
+                  key={i}
+                  className="bg-gray-900 text-green-400 p-4 rounded-lg max-h-75 overflow-y-auto text-sm"
+                >
+                  <pre>
+                    <code>{block.content}</code>
+                  </pre>
+                </div>
+              ) : (
+                <p key={i} className="whitespace-pre-line leading-relaxed">
+                  {block.content}
+                </p>
+              ),
+            )}
+          </div>
 
-          {/* ✅ Copied Feedback */}
-          {copied && (
-            <span className="text-green-400 text-xs absolute top-2 right-10">
-              Copied!
-            </span>
-          )}
-        </div>
+          {/* ✨ Cursor */}
+          <span className="animate-pulse">|</span>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
