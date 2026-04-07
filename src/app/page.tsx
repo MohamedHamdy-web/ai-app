@@ -12,11 +12,20 @@ export default function Home() {
   const handleGenerate = async (prompt: string) => {
     setLoading(true);
 
-    // temporary mock
-    setTimeout(() => {
-      setResult("AI response will appear here...");
-      setLoading(false);
-    }, 1500);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await res.json();
+
+      setResult(data.result);
+    } catch (error) {
+      setResult("Error generating response");
+    }
+
+    setLoading(false);
   };
 
   return (
