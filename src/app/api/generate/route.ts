@@ -1,34 +1,11 @@
 import { NextResponse } from "next/server";
+import { generateAIResponse } from "@/lib/openai";
 
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    console.log("GROQ RESPONSE:", data);
-
-    const result = data?.choices?.[0]?.message?.content || "No response";
+    const result = await generateAIResponse(prompt);
 
     return NextResponse.json({ result });
   } catch (error) {
