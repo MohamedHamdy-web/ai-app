@@ -20,7 +20,8 @@ export default function PromptBox({ onGenerate }: Props) {
 
       <button
         onClick={() => onGenerate(prompt)}
-        className="bg-white text-black px-6 py-3 rounded-xl font-medium hover:opacity-80 transition"
+        disabled={!prompt.trim()}
+        className="bg-white text-black px-6 py-3 rounded-xl font-medium hover:opacity-80 transition disabled:opacity-50"
       >
         Generate
       </button>
