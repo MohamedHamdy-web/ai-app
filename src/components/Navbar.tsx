@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 
 export default function Navbar() {
   const { isLoaded, isSignedIn } = useUser();
@@ -10,7 +10,7 @@ export default function Navbar() {
     <nav className="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/[0.045] px-5 py-4 shadow-lg shadow-black/10 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <Link href="/" className="text-xl font-semibold tracking-tight">
-          AI App
+          Hambola Ai
         </Link>
         <p className="mt-1 text-sm text-white/60">
           Create faster with a cleaner prompt-to-result workspace.
@@ -18,10 +18,6 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-medium text-emerald-100 md:block">
-          {isLoaded && isSignedIn ? "History Sync On" : "Guest Mode Available"}
-        </div>
-
         {isLoaded && !isSignedIn ? (
           <>
             <Link
@@ -37,12 +33,6 @@ export default function Navbar() {
               Sign up
             </Link>
           </>
-        ) : null}
-
-        {isLoaded && isSignedIn ? (
-          <div className="rounded-full border border-white/15 bg-white/[0.04] p-1">
-            <UserButton />
-          </div>
         ) : null}
       </div>
     </nav>

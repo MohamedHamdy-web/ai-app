@@ -92,15 +92,20 @@ export async function findOwnedChat(chatId: string, owner: ChatOwner) {
 }
 
 export function serializeChat(chat: ChatWithMessages): ChatSummary {
-  const latestMessage = [...chat.messages]
+  const latestUserMessage = [...chat.messages]
     .reverse()
-    .find((message) => message.role === MessageRole.assistant || message.role === MessageRole.user);
+    .find((message) => message.role === MessageRole.user);
+  const preview = latestUserMessage?.content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
 
   return {
     id: chat.id,
     title: chat.title,
     toolId: chat.toolId,
-    preview: latestMessage?.content.slice(0, 120) ?? "No messages yet",
+    preview: preview || "No question yet",
     updatedAt: chat.updatedAt.toISOString(),
     createdAt: chat.createdAt.toISOString(),
     messageCount: chat.messages.length,
@@ -142,11 +147,20 @@ export function buildAiMessages(
 }
 
 export function buildChatTitle(prompt: string) {
-  const collapsedPrompt = prompt.replace(/\s+/g, " ").trim();
+  const collapsedPrompt = prompt
+    .replace(/[`#>*_~[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   if (!collapsedPrompt) {
     return "New chat";
   }
 
-  return collapsedPrompt.slice(0, 72);
+  const clippedPrompt = collapsedPrompt.slice(0, 64).trim();
+
+  if (clippedPrompt.length < collapsedPrompt.length) {
+    return `${clippedPrompt}...`;
+  }
+
+  return clippedPrompt;
 }

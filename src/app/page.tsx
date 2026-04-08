@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { PenSquare, Sparkles } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
 import Layout from "@/components/Layout";
 import Navbar from "@/components/Navbar";
-import ToolSelector from "@/components/ToolSelector";
 import PromptBox from "@/components/PromptBox";
 import ResultPanel from "@/components/ResultPanel";
 import History from "@/components/History";
@@ -24,6 +24,13 @@ function sortChats(chats: ChatSummary[]) {
 function upsertChatSummary(chats: ChatSummary[], nextChat: ChatSummary) {
   return sortChats(
     chats.filter((chat) => chat.id !== nextChat.id).concat(nextChat),
+  );
+}
+
+function getLatestAssistantMessageId(messages: ChatMessage[]) {
+  return (
+    [...messages].reverse().find((message) => message.role === "assistant")?.id ??
+    null
   );
 }
 
@@ -54,6 +61,8 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 
 export default function Home() {
   const { isLoaded } = useUser();
+  const isCreatingInitialChatRef = useRef(false);
+  const hasHandledInitialChatsRef = useRef(false);
 
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState("text");
@@ -65,15 +74,31 @@ export default function Home() {
   const [chatsLoading, setChatsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [pendingAnimatedAssistantId, setPendingAnimatedAssistantId] =
+    useState<string | null>(null);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] =
+    useState(false);
 
-  const activeToolData =
-    tools.find((tool) => tool.id === activeTool) ?? tools[0];
   const selectedChat =
     chats.find((chat) => chat.id === selectedChatId) ?? null;
   const currentMessages = selectedChatId
     ? messagesByChatId[selectedChatId] ?? []
     : [];
   const ownerReady = isLoaded && guestSessionId !== null;
+
+  const updatePageScrollState = useCallback(() => {
+    const doc = document.documentElement;
+    const scrollTop = window.scrollY || doc.scrollTop;
+    const maxScrollTop = doc.scrollHeight - window.innerHeight;
+    const hasOverflow = maxScrollTop > 24;
+    const effectiveBottomThreshold = maxScrollTop > 100 ? 100 : 24;
+    const shouldShow =
+      hasOverflow && maxScrollTop - scrollTop > effectiveBottomThreshold;
+
+    setShowScrollToBottomButton((currentValue) =>
+      currentValue === shouldShow ? currentValue : shouldShow,
+    );
+  }, []);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -82,6 +107,41 @@ export default function Home() {
 
     setGuestSessionId(getOrCreateGuestSessionId());
   }, [isLoaded]);
+
+  useEffect(() => {
+    updatePageScrollState();
+
+    window.addEventListener("scroll", updatePageScrollState, {
+      passive: true,
+    });
+    window.addEventListener("resize", updatePageScrollState);
+
+    return () => {
+      window.removeEventListener("scroll", updatePageScrollState);
+      window.removeEventListener("resize", updatePageScrollState);
+    };
+  }, [updatePageScrollState]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior:
+          currentMessages.length > 0 || sendingMessage ? "smooth" : "auto",
+      });
+      updatePageScrollState();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    currentMessages.length,
+    selectedChatId,
+    sendingMessage,
+    messagesLoading,
+    updatePageScrollState,
+  ]);
 
   const loadChat = useEffectEvent(async (chatId: string) => {
     if (!guestSessionId) {
@@ -107,6 +167,7 @@ export default function Home() {
         [chatId]: data.messages,
       }));
       setChats((prev) => upsertChatSummary(prev, data.chat));
+      setPendingAnimatedAssistantId(null);
       setActiveTool(data.chat.toolId);
     } catch (error) {
       console.error(error);
@@ -164,7 +225,7 @@ export default function Home() {
     void fetchChats();
   }, [ownerReady, guestSessionId]);
 
-  const createChat = async (toolId: string) => {
+  const createChat = useCallback(async (toolId: string) => {
     if (!guestSessionId) {
       throw new Error("Guest session is not ready yet");
     }
@@ -190,10 +251,39 @@ export default function Home() {
       [data.chat.id]: data.messages,
     }));
     setSelectedChatId(data.chat.id);
+    setPendingAnimatedAssistantId(null);
     setActiveTool(data.chat.toolId);
 
     return data.chat;
-  };
+  }, [guestSessionId]);
+
+  useEffect(() => {
+    if (
+      !ownerReady ||
+      chatsLoading ||
+      hasHandledInitialChatsRef.current ||
+      isCreatingInitialChatRef.current
+    ) {
+      return;
+    }
+
+    if (chats.length > 0 || selectedChatId) {
+      hasHandledInitialChatsRef.current = true;
+      return;
+    }
+
+    hasHandledInitialChatsRef.current = true;
+    isCreatingInitialChatRef.current = true;
+
+    void createChat(activeTool)
+      .catch((error) => {
+        console.error(error);
+        hasHandledInitialChatsRef.current = false;
+      })
+      .finally(() => {
+        isCreatingInitialChatRef.current = false;
+      });
+  }, [activeTool, chats.length, chatsLoading, createChat, ownerReady, selectedChatId]);
 
   const handleCreateChat = async () => {
     try {
@@ -246,7 +336,11 @@ export default function Home() {
         chat: ChatSummary;
         messages: ChatMessage[];
       }>(res);
+      const latestAssistantMessageId = getLatestAssistantMessageId(
+        data.messages,
+      );
 
+      setPendingAnimatedAssistantId(latestAssistantMessageId);
       setMessagesByChatId((prev) => ({
         ...prev,
         [resolvedChatId]: data.messages,
@@ -277,8 +371,103 @@ export default function Home() {
   };
 
   const handleSelectChat = (chat: ChatSummary) => {
+    setPendingAnimatedAssistantId(null);
     setSelectedChatId(chat.id);
     setActiveTool(chat.toolId);
+  };
+
+  const handleAssistantAnimationStart = useCallback((messageId: string) => {
+    setPendingAnimatedAssistantId((currentId) =>
+      currentId === messageId ? null : currentId,
+    );
+  }, []);
+
+  const handleRenameChat = async (chat: ChatSummary) => {
+    if (!guestSessionId) {
+      return;
+    }
+
+    const proposedTitle = window.prompt("Rename chat", chat.title)?.trim();
+
+    if (!proposedTitle || proposedTitle === chat.title) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/chats/${chat.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          guestSessionId,
+          title: proposedTitle,
+        }),
+      });
+      const data = await readJsonResponse<{
+        chat: ChatSummary;
+        messages: ChatMessage[];
+      }>(res);
+
+      setChats((prev) => upsertChatSummary(prev, data.chat));
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [chat.id]: data.messages,
+      }));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteChat = async (chat: ChatSummary) => {
+    if (!guestSessionId) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete "${chat.title}"? This conversation will be removed permanently.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `/api/chats/${chat.id}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      await readJsonResponse<{ success: boolean }>(res);
+
+      const remainingChats = chats.filter((item) => item.id !== chat.id);
+
+      setChats(remainingChats);
+      setMessagesByChatId((prev) => {
+        const nextMessagesByChatId = { ...prev };
+        delete nextMessagesByChatId[chat.id];
+        return nextMessagesByChatId;
+      });
+
+      if (selectedChatId === chat.id) {
+        const nextSelectedChat = remainingChats[0] ?? null;
+        setSelectedChatId(nextSelectedChat?.id ?? null);
+
+        if (nextSelectedChat) {
+          setActiveTool(nextSelectedChat.toolId);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleScrollToLatest = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
   };
 
   if (!isLoaded || guestSessionId === null) {
@@ -297,79 +486,60 @@ export default function Home() {
           selectedChatId={selectedChatId}
           loading={chatsLoading}
           onCreateChat={handleCreateChat}
+          onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
           onSelect={handleSelectChat}
         />
       }
+      onCreateChat={handleCreateChat}
     >
-      <Navbar />
+      <div className="flex min-h-[calc(100vh-6rem)] flex-col">
+        <Navbar />
 
-      <section className="mt-6 rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(34,211,238,0.12),_transparent_26%),rgba(255,255,255,0.03)] p-6 shadow-2xl shadow-black/15 sm:p-8">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-white/65">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-200" />
-              AI Workspace
-            </div>
-
-            <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              Keep every chat as a separate, reusable conversation.
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-base leading-8 text-white/65 sm:text-lg">
-              Start a new thread, jump back into an older one, and let each chat
-              keep its own context instead of collapsing into one long history.
-            </p>
+        <section className="mt-6 flex flex-1 flex-col gap-4">
+          <div className="flex-1">
+            <ResultPanel
+              chatTitle={selectedChat?.title}
+              messages={currentMessages}
+              loading={messagesLoading}
+              sending={sendingMessage}
+              activeTool={activeTool}
+              animatedAssistantId={pendingAnimatedAssistantId}
+              onAssistantAnimationStart={handleAssistantAnimationStart}
+            />
           </div>
 
-          <div className="w-full max-w-xs">
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.05] p-4">
-              <PenSquare className="h-5 w-5 text-emerald-200" />
-              <div className="mt-4 text-2xl font-semibold text-white">
-                {tools.length}
-              </div>
-              <div className="mt-1 text-sm text-white/55">Creation modes</div>
-            </div>
+          <div className="sticky bottom-4 z-20 mt-auto">
+            <AnimatePresence>
+              {showScrollToBottomButton ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="mb-3 flex justify-center"
+                >
+                  <button
+                    type="button"
+                    onClick={handleScrollToLatest}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#1f2a37]/90 text-white/80 shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:bg-[#293547] hover:text-white"
+                    aria-label="Scroll to bottom"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+            <PromptBox
+              onGenerate={handleGenerate}
+              loading={sendingMessage}
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              tools={tools}
+            />
           </div>
-        </div>
-      </section>
-
-      <section className="mt-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
-              Choose a creation mode
-            </h2>
-            <p className="mt-1 text-sm text-white/55">
-              Current focus: {activeToolData.name.toLowerCase()}
-            </p>
-          </div>
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/65 lg:block">
-            {activeToolData.description}
-          </div>
-        </div>
-
-        <ToolSelector
-          tools={tools}
-          activeTool={activeTool}
-          setActiveTool={setActiveTool}
-        />
-      </section>
-
-      <section className="mt-6 space-y-6">
-        <PromptBox
-          onGenerate={handleGenerate}
-          loading={sendingMessage}
-          activeTool={activeTool}
-          currentChatTitle={selectedChat?.title}
-        />
-        <ResultPanel
-          chatTitle={selectedChat?.title}
-          messages={currentMessages}
-          loading={messagesLoading}
-          sending={sendingMessage}
-          activeTool={activeTool}
-        />
-      </section>
+        </section>
+      </div>
     </Layout>
   );
 }
