@@ -19,6 +19,10 @@ export async function generateAIResponse(prompt: string) {
     },
   );
 
+  if (!response.ok) {
+    throw new Error(`Groq request failed with status ${response.status}`);
+  }
+
   const data = await response.json();
 
   return data?.choices?.[0]?.message?.content || "No response";

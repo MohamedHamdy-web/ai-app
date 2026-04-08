@@ -27,7 +27,10 @@ export default function ResultBox({ result, loading }: Props) {
 
   // ✨ Streaming effect
   useEffect(() => {
-    if (!result) return;
+    if (!result) {
+      setDisplayedText("");
+      return;
+    }
 
     let i = 0;
     setDisplayedText("");
@@ -36,7 +39,9 @@ export default function ResultBox({ result, loading }: Props) {
       setDisplayedText((prev) => prev + result.charAt(i));
       i++;
 
-      if (i >= result.length) clearInterval(interval);
+      if (i >= result.length) {
+        clearInterval(interval);
+      }
     }, 10);
 
     return () => clearInterval(interval);
