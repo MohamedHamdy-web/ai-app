@@ -21,7 +21,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const result = await generateAIResponse(prompt);
+    const result = await generateAIResponse([
+      {
+        role: "user",
+        content: prompt,
+      },
+    ]);
 
     if (userId) {
       const user = await prisma.user.upsert({

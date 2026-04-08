@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { Sparkles, Wand2 } from "lucide-react";
 
 type Props = {
-  onGenerate: (prompt: string) => void;
+  onGenerate: (prompt: string) => Promise<boolean>;
   loading: boolean;
   activeTool: string;
+  currentChatTitle?: string | null;
 };
 
 const promptIdeas: Record<string, string[]> = {
@@ -59,6 +60,7 @@ export default function PromptBox({
   onGenerate,
   loading,
   activeTool,
+  currentChatTitle,
 }: Props) {
   const [prompt, setPrompt] = useState("");
 
@@ -70,6 +72,20 @@ export default function PromptBox({
     () => promptIdeas[activeTool] ?? promptIdeas.text,
     [activeTool],
   );
+
+  const handleSubmit = async () => {
+    const normalizedPrompt = prompt.trim();
+
+    if (!normalizedPrompt || loading) {
+      return;
+    }
+
+    const wasSent = await onGenerate(normalizedPrompt);
+
+    if (wasSent) {
+      setPrompt("");
+    }
+  };
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5 shadow-xl shadow-black/15 backdrop-blur-xl sm:p-6">
@@ -89,8 +105,10 @@ export default function PromptBox({
         </div>
 
         <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
-          <div className="font-medium">Prompt Length</div>
-          <div className="mt-1 text-emerald-50/80">{prompt.length} characters</div>
+          <div className="font-medium">Current Chat</div>
+          <div className="mt-1 max-w-52 truncate text-emerald-50/80">
+            {currentChatTitle || "A new chat will start"}
+          </div>
         </div>
       </div>
 
@@ -127,12 +145,12 @@ export default function PromptBox({
 
         <button
           type="button"
-          onClick={() => onGenerate(prompt)}
+          onClick={handleSubmit}
           disabled={!prompt.trim() || loading}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 font-semibold text-slate-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Wand2 className="h-4 w-4" />
-          {loading ? "Generating..." : "Generate Result"}
+          {loading ? "Sending..." : "Send Message"}
         </button>
       </div>
     </section>

@@ -1,4 +1,9 @@
-export async function generateAIResponse(prompt: string) {
+type AiMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export async function generateAIResponse(messages: AiMessage[]) {
   const response = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
     {
@@ -9,12 +14,7 @@ export async function generateAIResponse(prompt: string) {
       },
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        messages,
       }),
     },
   );

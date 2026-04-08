@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { PenSquare, Sparkles } from "lucide-react";
 
@@ -10,13 +10,22 @@ import ToolSelector from "@/components/ToolSelector";
 import PromptBox from "@/components/PromptBox";
 import ResultPanel from "@/components/ResultPanel";
 import History from "@/components/History";
-
 import { tools } from "@/data/tools";
+import type { ChatMessage, ChatSummary } from "@/lib/chat-types";
+import { getOrCreateGuestSessionId } from "@/lib/guest-session";
 
-type HistoryItem = {
-  prompt: string;
-  result: string;
-};
+function sortChats(chats: ChatSummary[]) {
+  return [...chats].sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+  );
+}
+
+function upsertChatSummary(chats: ChatSummary[], nextChat: ChatSummary) {
+  return sortChats(
+    chats.filter((chat) => chat.id !== nextChat.id).concat(nextChat),
+  );
+}
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -46,71 +55,233 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 export default function Home() {
   const { isLoaded } = useUser();
 
+  const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState("text");
-  const [result, setResult] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [messagesByChatId, setMessagesByChatId] = useState<
+    Record<string, ChatMessage[]>
+  >({});
+  const [chatsLoading, setChatsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const activeToolData =
     tools.find((tool) => tool.id === activeTool) ?? tools[0];
+  const selectedChat =
+    chats.find((chat) => chat.id === selectedChatId) ?? null;
+  const currentMessages = selectedChatId
+    ? messagesByChatId[selectedChatId] ?? []
+    : [];
+  const ownerReady = isLoaded && guestSessionId !== null;
 
-  // 🔥 Fetch history from DB
   useEffect(() => {
     if (!isLoaded) {
       return;
     }
 
-    const fetchHistory = async () => {
-      try {
-        const res = await fetch("/api/history", { cache: "no-store" });
-        const data = await readJsonResponse<{ history?: HistoryItem[] }>(res);
-
-        setHistory(data.history || []);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchHistory();
+    setGuestSessionId(getOrCreateGuestSessionId());
   }, [isLoaded]);
 
-  // 🔥 Generate AI
-  const handleGenerate = async (input: string) => {
-    setLoading(true);
+  const loadChat = useEffectEvent(async (chatId: string) => {
+    if (!guestSessionId) {
+      return;
+    }
 
-    const selectedTool = tools.find((t) => t.id === activeTool);
-    const prompt = selectedTool?.systemPrompt(input) || input;
+    setMessagesLoading(true);
 
     try {
-      const res = await fetch("/api/generate", {
+      const res = await fetch(
+        `/api/chats/${chatId}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
+        {
+          cache: "no-store",
+        },
+      );
+      const data = await readJsonResponse<{
+        chat: ChatSummary;
+        messages: ChatMessage[];
+      }>(res);
+
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [chatId]: data.messages,
+      }));
+      setChats((prev) => upsertChatSummary(prev, data.chat));
+      setActiveTool(data.chat.toolId);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  });
+
+  useEffect(() => {
+    if (!ownerReady || !selectedChatId || messagesByChatId[selectedChatId]) {
+      return;
+    }
+
+    void loadChat(selectedChatId);
+  }, [ownerReady, selectedChatId, messagesByChatId]);
+
+  const fetchChats = useEffectEvent(async () => {
+    if (!guestSessionId) {
+      return;
+    }
+
+    setChatsLoading(true);
+
+    try {
+      const res = await fetch(
+        `/api/chats?guestSessionId=${encodeURIComponent(guestSessionId)}`,
+        {
+          cache: "no-store",
+        },
+      );
+      const data = await readJsonResponse<{ chats: ChatSummary[] }>(res);
+      const nextChats = data.chats ?? [];
+      const nextSelectedId = nextChats.some((chat) => chat.id === selectedChatId)
+        ? selectedChatId
+        : nextChats[0]?.id ?? null;
+
+      setChats(nextChats);
+      setSelectedChatId(nextSelectedId);
+
+      if (nextSelectedId && !messagesByChatId[nextSelectedId]) {
+        void loadChat(nextSelectedId);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setChatsLoading(false);
+    }
+  });
+
+  useEffect(() => {
+    if (!ownerReady || !guestSessionId) {
+      return;
+    }
+
+    void fetchChats();
+  }, [ownerReady, guestSessionId]);
+
+  const createChat = async (toolId: string) => {
+    if (!guestSessionId) {
+      throw new Error("Guest session is not ready yet");
+    }
+
+    const res = await fetch("/api/chats", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        guestSessionId,
+        toolId,
+      }),
+    });
+    const data = await readJsonResponse<{
+      chat: ChatSummary;
+      messages: ChatMessage[];
+    }>(res);
+
+    setChats((prev) => upsertChatSummary(prev, data.chat));
+    setMessagesByChatId((prev) => ({
+      ...prev,
+      [data.chat.id]: data.messages,
+    }));
+    setSelectedChatId(data.chat.id);
+    setActiveTool(data.chat.toolId);
+
+    return data.chat;
+  };
+
+  const handleCreateChat = async () => {
+    try {
+      await createChat(activeTool);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleGenerate = async (input: string) => {
+    if (!guestSessionId) {
+      return false;
+    }
+
+    let chatId = selectedChatId;
+
+    try {
+      if (!chatId) {
+        const chat = await createChat(activeTool);
+        chatId = chat.id;
+      }
+
+      const resolvedChatId = chatId;
+
+      const optimisticMessage: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        role: "user",
+        content: input,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [resolvedChatId]: [...(prev[resolvedChatId] ?? []), optimisticMessage],
+      }));
+      setSendingMessage(true);
+
+      const res = await fetch(`/api/chats/${resolvedChatId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          guestSessionId,
+          toolId: activeTool,
+          content: input,
+        }),
       });
+      const data = await readJsonResponse<{
+        chat: ChatSummary;
+        messages: ChatMessage[];
+      }>(res);
 
-      const data = await readJsonResponse<{ result: string }>(res);
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [resolvedChatId]: data.messages,
+      }));
+      setChats((prev) => upsertChatSummary(prev, data.chat));
+      setSelectedChatId(resolvedChatId);
+      setActiveTool(data.chat.toolId);
 
-      setResult(data.result);
-
-      // ✅ update history instantly
-      setHistory((prev) => [{ prompt: input, result: data.result }, ...prev]);
+      return true;
     } catch (error) {
       console.error(error);
-      setResult("Error generating response");
+
+      if (chatId) {
+        const failedChatId = chatId;
+
+        setMessagesByChatId((prev) => ({
+          ...prev,
+          [failedChatId]: (prev[failedChatId] ?? []).filter(
+            (message: ChatMessage) => !message.id.startsWith("temp-"),
+          ),
+        }));
+      }
+
+      return false;
     } finally {
-      setLoading(false);
+      setSendingMessage(false);
     }
   };
 
-  // 🔥 Click history → load result
-  const handleSelectHistory = (item: HistoryItem) => {
-    setResult(item.result);
+  const handleSelectChat = (chat: ChatSummary) => {
+    setSelectedChatId(chat.id);
+    setActiveTool(chat.toolId);
   };
 
-  // 🔐 Protect page
-  if (!isLoaded) {
+  if (!isLoaded || guestSessionId === null) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p>Loading...</p>
@@ -120,7 +291,15 @@ export default function Home() {
 
   return (
     <Layout
-      sidebar={<History history={history} onSelect={handleSelectHistory} />}
+      sidebar={
+        <History
+          chats={chats}
+          selectedChatId={selectedChatId}
+          loading={chatsLoading}
+          onCreateChat={handleCreateChat}
+          onSelect={handleSelectChat}
+        />
+      }
     >
       <Navbar />
 
@@ -133,12 +312,12 @@ export default function Home() {
             </div>
 
             <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              Build polished outputs from a calmer, sharper home screen.
+              Keep every chat as a separate, reusable conversation.
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-8 text-white/65 sm:text-lg">
-              Switch between writing, code, and social content workflows,
-              generate instantly, and keep your best ideas within reach.
+              Start a new thread, jump back into an older one, and let each chat
+              keep its own context instead of collapsing into one long history.
             </p>
           </div>
 
@@ -179,12 +358,15 @@ export default function Home() {
       <section className="mt-6 space-y-6">
         <PromptBox
           onGenerate={handleGenerate}
-          loading={loading}
+          loading={sendingMessage}
           activeTool={activeTool}
+          currentChatTitle={selectedChat?.title}
         />
         <ResultPanel
-          result={result}
-          loading={loading}
+          chatTitle={selectedChat?.title}
+          messages={currentMessages}
+          loading={messagesLoading}
+          sending={sendingMessage}
           activeTool={activeTool}
         />
       </section>
