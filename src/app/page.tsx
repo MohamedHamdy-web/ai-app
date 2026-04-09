@@ -4,7 +4,9 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import { useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import Layout from "@/components/Layout";
 import Navbar from "@/components/Navbar";
 import PromptBox from "@/components/PromptBox";
@@ -63,6 +65,8 @@ export default function Home() {
   const { isLoaded } = useUser();
   const isCreatingInitialChatRef = useRef(false);
   const hasHandledInitialChatsRef = useRef(false);
+  const chatsRef = useRef<ChatSummary[]>([]);
+  const selectedChatIdRef = useRef<string | null>(null);
 
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState("text");
@@ -85,6 +89,14 @@ export default function Home() {
     ? messagesByChatId[selectedChatId] ?? []
     : [];
   const ownerReady = isLoaded && guestSessionId !== null;
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
 
   const updatePageScrollState = useCallback(() => {
     const doc = document.documentElement;
@@ -382,85 +394,131 @@ export default function Home() {
     );
   }, []);
 
-  const handleRenameChat = async (chat: ChatSummary) => {
+  const handleRenameChat = async (chat: ChatSummary, title: string) => {
+    if (!guestSessionId) {
+      return false;
+    }
+
+    const proposedTitle = title.trim();
+
+    if (!proposedTitle) {
+      return false;
+    }
+
+    try {
+      const renamePromise = (async () => {
+        const res = await fetch(`/api/chats/${chat.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            guestSessionId,
+            title: proposedTitle,
+          }),
+        });
+        const data = await readJsonResponse<{
+          chat: ChatSummary;
+          messages: ChatMessage[];
+        }>(res);
+
+        setChats((prev) => upsertChatSummary(prev, data.chat));
+        setMessagesByChatId((prev) => ({
+          ...prev,
+          [chat.id]: data.messages,
+        }));
+
+        return data.chat;
+      })();
+
+      toast.promise(renamePromise, {
+        loading: "Renaming chat...",
+        success: (updatedChat) => `Renamed to "${updatedChat.title}"`,
+        error: (error) =>
+          error instanceof Error ? error.message : "Failed to rename chat",
+      });
+
+      await renamePromise;
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
+  const deleteChat = async (chat: ChatSummary) => {
     if (!guestSessionId) {
       return;
     }
 
-    const proposedTitle = window.prompt("Rename chat", chat.title)?.trim();
-
-    if (!proposedTitle || proposedTitle === chat.title) {
-      return;
-    }
-
     try {
-      const res = await fetch(`/api/chats/${chat.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          guestSessionId,
-          title: proposedTitle,
-        }),
-      });
-      const data = await readJsonResponse<{
-        chat: ChatSummary;
-        messages: ChatMessage[];
-      }>(res);
+      const deletePromise = (async () => {
+        const res = await fetch(
+          `/api/chats/${chat.id}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
+          {
+            method: "DELETE",
+          },
+        );
+        await readJsonResponse<{ success: boolean }>(res);
 
-      setChats((prev) => upsertChatSummary(prev, data.chat));
-      setMessagesByChatId((prev) => ({
-        ...prev,
-        [chat.id]: data.messages,
-      }));
+        const remainingChats = chatsRef.current.filter(
+          (item) => item.id !== chat.id,
+        );
+
+        setChats(remainingChats);
+        setMessagesByChatId((prev) => {
+          const nextMessagesByChatId = { ...prev };
+          delete nextMessagesByChatId[chat.id];
+          return nextMessagesByChatId;
+        });
+
+        if (selectedChatIdRef.current === chat.id) {
+          const nextSelectedChat = remainingChats[0] ?? null;
+          setSelectedChatId(nextSelectedChat?.id ?? null);
+
+          if (nextSelectedChat) {
+            setActiveTool(nextSelectedChat.toolId);
+          }
+        }
+
+        return chat.title;
+      })();
+
+      toast.promise(deletePromise, {
+        loading: `Deleting "${chat.title}"...`,
+        success: (deletedTitle) => `"${deletedTitle}" was removed`,
+        error: (error) =>
+          error instanceof Error ? error.message : "Failed to delete chat",
+      });
+
+      await deletePromise;
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleDeleteChat = async (chat: ChatSummary) => {
+  const handleDeleteChat = (chat: ChatSummary) => {
     if (!guestSessionId) {
       return;
     }
 
-    const shouldDelete = window.confirm(
-      `Delete "${chat.title}"? This conversation will be removed permanently.`,
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `/api/chats/${chat.id}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
-        {
-          method: "DELETE",
+    const confirmationToastId = toast.warning("Delete conversation?", {
+      description: `"${chat.title}" will be removed permanently from your history.`,
+      duration: 12000,
+      action: {
+        label: "Delete",
+        onClick: () => {
+          toast.dismiss(confirmationToastId);
+          void deleteChat(chat);
         },
-      );
-      await readJsonResponse<{ success: boolean }>(res);
-
-      const remainingChats = chats.filter((item) => item.id !== chat.id);
-
-      setChats(remainingChats);
-      setMessagesByChatId((prev) => {
-        const nextMessagesByChatId = { ...prev };
-        delete nextMessagesByChatId[chat.id];
-        return nextMessagesByChatId;
-      });
-
-      if (selectedChatId === chat.id) {
-        const nextSelectedChat = remainingChats[0] ?? null;
-        setSelectedChatId(nextSelectedChat?.id ?? null);
-
-        if (nextSelectedChat) {
-          setActiveTool(nextSelectedChat.toolId);
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    }
+      },
+      cancel: {
+        label: "Keep",
+        onClick: () => {
+          toast.dismiss(confirmationToastId);
+        },
+      },
+    });
   };
 
   const handleScrollToLatest = () => {
@@ -471,11 +529,7 @@ export default function Home() {
   };
 
   if (!isLoaded || guestSessionId === null) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <p>Loading...</p>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (
