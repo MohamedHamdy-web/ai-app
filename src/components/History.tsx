@@ -118,7 +118,7 @@ export default function History({
 
   return (
     <section className="flex h-full flex-col">
-      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
+      <div className="rounded-3xl border border-white/10 bg-white/4 p-4">
         <div>
           <div>
             <div className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">
@@ -168,8 +168,8 @@ export default function History({
         ) : null}
 
         {!loading && chats.length === 0 ? (
-          <div className="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.025] px-5 text-center">
-            <div className="rounded-full border border-white/10 bg-white/[0.05] p-3">
+          <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/2.5 px-5 text-center">
+            <div className="rounded-full border border-white/10 bg-white/5 p-3">
               <Clock3 className="h-5 w-5 text-white/70" />
             </div>
             <h3 className="mt-4 text-lg font-semibold text-white">
@@ -224,7 +224,7 @@ export default function History({
                         type="button"
                         onClick={closeRename}
                         disabled={renamePending}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-white/70 transition hover:bg-white/8 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                         aria-label="Cancel rename"
                       >
                         <X className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function History({
                           current === chat.id ? null : chat.id,
                         );
                       }}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-white/70 transition hover:bg-white/8 hover:text-white"
                       aria-label={`Open actions for ${chat.title}`}
                     >
                       <MoreHorizontal className="h-4 w-4" />
@@ -280,7 +280,7 @@ export default function History({
                         <button
                           type="button"
                           onClick={() => handleStartRename(chat)}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/78 transition hover:bg-white/8 hover:text-white"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Rename

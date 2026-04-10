@@ -84,15 +84,15 @@ export default function Layout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_80%_10%,_rgba(34,211,238,0.12),_transparent_26%),linear-gradient(135deg,_#06131c_0%,_#0d1724_48%,_#142235_100%)] text-white">
-      <div className="mx-auto relative flex min-h-screen max-w-[1600px] flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_26%),radial-gradient(circle_at_80%_10%,rgba(34,211,238,0.12),transparent_26%),linear-gradient(135deg,#06131c_0%,#0d1724_48%,#142235_100%)] text-white">
+      <div className="mx-auto relative flex min-h-screen max-w-400 flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
         {!isSidebarOpen ? (
-          <div className="hidden lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:w-[4.5rem] lg:shrink-0">
-            <div className="relative flex h-full w-full flex-col items-center gap-3 rounded-[2rem] border border-white/10 bg-white/[0.045] px-3 py-4 shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <div className="hidden lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:w-18 lg:shrink-0">
+            <div className="relative flex h-full w-full flex-col items-center gap-3 rounded-4xl border border-white/10 bg-white/4.5 px-3 py-4 shadow-2xl shadow-black/25 backdrop-blur-xl">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/72 transition hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-white/72 transition hover:bg-white/8 hover:text-white"
                 aria-label="Open sidebar"
               >
                 <PanelLeftOpen className="h-4.5 w-4.5" />
@@ -101,14 +101,14 @@ export default function Layout({
               <button
                 type="button"
                 onClick={onCreateChat}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/72 transition hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-white/72 transition hover:bg-white/8 hover:text-white"
                 aria-label="Start new chat"
               >
                 <MessageSquarePlus className="h-4.5 w-4.5" />
               </button>
 
               {isLoaded && isSignedIn ? (
-                <div className="mt-auto rounded-full border border-white/12 bg-white/[0.04] p-1">
+                <div className="mt-auto rounded-full border border-white/12 bg-white/4 p-1">
                   <UserButton />
                 </div>
               ) : null}
@@ -135,14 +135,14 @@ export default function Layout({
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ type: "tween", duration: 0.22 }}
-                className="fixed inset-y-0 left-0 z-40 w-[90%] max-w-[22rem] shrink-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-[22rem]"
+                className="fixed inset-y-0 left-0 z-40 w-[90%] max-w-88 shrink-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-88"
               >
-                <div className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/25 backdrop-blur-xl">
+                <div className="flex h-full flex-col overflow-hidden rounded-4xl border border-white/10 bg-white/4.5 shadow-2xl shadow-black/25 backdrop-blur-xl">
                   <div className="flex items-center justify-end border-b border-white/8 px-4 py-3 sm:px-5">
                     <button
                       type="button"
                       onClick={() => setIsSidebarOpen(false)}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/72 transition hover:bg-white/[0.08] hover:text-white"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/4 text-white/72 transition hover:bg-white/8 hover:text-white"
                       aria-label="Close sidebar"
                     >
                       <PanelLeftClose className="h-4.5 w-4.5" />
@@ -153,12 +153,12 @@ export default function Layout({
                   </div>
                   <div className="border-t border-white/8 p-4 sm:p-5">
                     {isLoaded && isSignedIn ? (
-                      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
+                      <div className="rounded-3xl border border-white/10 bg-white/4 p-4">
                         <div
                           className="flex items-center gap-3 relative"
                           ref={menuRef}
                         >
-                          <div className="rounded-full border border-white/15 bg-white/[0.04] p-1">
+                          <div className="rounded-full border border-white/15 bg-white/4 p-1">
                             <UserButton />
                           </div>
                           <div className="min-w-0">
@@ -179,12 +179,12 @@ export default function Layout({
                           {menuOpen ? (
                             <div
                               id="account-menu"
-                              className="absolute bottom-full right-0 mb-3 w-48 rounded-[0.75rem] border border-white/8 bg-white/[0.035] p-2 shadow-2xl shadow-black/30"
+                              className="absolute bottom-full right-0 mb-3 w-48 rounded-xl border border-white/8 bg-white/[0.035] p-2 shadow-2xl shadow-black/30"
                             >
                               <ul className="flex flex-col">
                                 <li>
                                   <button
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/2"
                                     onClick={() => router.push("/account")}
                                   >
                                     Account settings
@@ -192,7 +192,7 @@ export default function Layout({
                                 </li>
                                 <li>
                                   <button
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/2"
                                     onClick={() => router.push("/plans")}
                                   >
                                     Upgrade plan
@@ -200,7 +200,7 @@ export default function Layout({
                                 </li>
                                 <li>
                                   <button
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/2"
                                     onClick={async () => {
                                       try {
                                         await clerk.signOut();
@@ -219,7 +219,7 @@ export default function Layout({
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
+                      <div className="rounded-3xl border border-white/10 bg-white/4 p-4">
                         <p className="text-sm font-semibold text-white">
                           Guest mode
                         </p>
@@ -250,7 +250,7 @@ export default function Layout({
         </AnimatePresence>
 
         <main className="min-w-0 flex-1">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-4 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6 lg:min-h-[calc(100vh-3rem)] lg:p-8">
+          <div className="rounded-4xl border border-white/10 bg-white/[0.035] p-4 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6 lg:min-h-[calc(100vh-3rem)] lg:p-8">
             {children}
           </div>
         </main>

@@ -81,7 +81,7 @@ export default function AssistantMessageContent({
     return (
       <p className="whitespace-pre-line text-[15px] leading-7 text-white/84">
         {content.slice(0, visibleCharacterCount)}
-        <span className="ml-0.5 inline-block h-5 w-[2px] animate-pulse align-middle bg-white/60" />
+        <span className="ml-0.5 inline-block h-5 w-0.5 animate-pulse align-middle bg-white/60" />
       </p>
     );
   }

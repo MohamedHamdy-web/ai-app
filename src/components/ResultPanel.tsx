@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -58,13 +58,13 @@ export default function ResultPanel({
   };
   return (
     <motion.section
-      className="flex min-h-[34rem] flex-col rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-4 shadow-xl shadow-black/15 backdrop-blur-xl sm:p-5"
+      className="flex min-h-136 flex-col rounded-[1.75rem] border border-white/10 bg-white/4.5 p-4 shadow-xl shadow-black/15 backdrop-blur-xl sm:p-5"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/65">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/65">
             <Sparkles className="h-3.5 w-3.5 text-cyan-200" />
             Conversation
           </div>
@@ -83,13 +83,13 @@ export default function ResultPanel({
         </div>
       </div>
 
-      <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-3 sm:p-4">
+      <div className="mt-4 rounded-3xl border border-white/10 bg-slate-950/45 p-3 sm:p-4">
         {loading ? (
           <div className="space-y-4">
             {[0, 1, 2].map((item) => (
               <div
                 key={item}
-                className={`animate-pulse rounded-[1.25rem] border border-white/8 bg-white/[0.04] p-4 ${
+                className={`animate-pulse rounded-[1.25rem] border border-white/8 bg-white/4 p-4 ${
                   item % 2 === 0 ? "mr-12" : "ml-12"
                 }`}
               >
@@ -102,7 +102,7 @@ export default function ResultPanel({
         ) : null}
 
         {!loading && messages.length === 0 ? (
-          <div className="flex min-h-[24rem] flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-white/10 bg-white/[0.02] px-6 text-center">
+          <div className="flex min-h-96 flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-white/10 bg-white/2 px-6 text-center">
             <div className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100">
               No messages yet
             </div>
@@ -126,7 +126,7 @@ export default function ResultPanel({
                 className={`rounded-[1.35rem] border px-4 py-3.5 shadow-lg shadow-black/5 sm:px-5 sm:py-4 ${
                   message.role === "user"
                     ? "ml-auto max-w-3xl border-cyan-300/25 bg-[linear-gradient(135deg,rgba(34,211,238,0.18),rgba(16,185,129,0.15))]"
-                    : "mr-auto max-w-4xl border-white/10 bg-white/[0.04]"
+                    : "mr-auto max-w-4xl border-white/10 bg-white/4"
                 }`}
               >
                 <div className="mb-2.5 flex items-center justify-between gap-3">
@@ -164,7 +164,7 @@ export default function ResultPanel({
             ))}
 
             {sending ? (
-              <div className="mr-auto max-w-4xl rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-5 py-4">
+              <div className="mr-auto max-w-4xl rounded-[1.35rem] border border-white/10 bg-white/4 px-5 py-4">
                 <div className="mb-2.5 flex items-center justify-between gap-3">
                   <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/45">
                     Assistant

@@ -37,17 +37,19 @@ export default function ToolSelector({
             onClick={() => setActiveTool(tool.id)}
             whileTap={{ scale: 0.98 }}
             whileHover={{ y: -4 }}
-            className={`group rounded-[1.5rem] border p-5 text-left transition ${
+            className={`group rounded-3xl border p-5 text-left transition ${
               activeTool === tool.id
                 ? "border-emerald-300/40 bg-emerald-300/10 shadow-lg shadow-emerald-950/30"
-                : "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.06]"
+                : "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/6"
             }`}
           >
             <div className="flex items-start justify-between gap-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+              <div className="rounded-2xl border border-white/10 bg-white/6 p-3">
                 <Icon
                   className={`h-5 w-5 ${
-                    activeTool === tool.id ? "text-emerald-200" : "text-white/80"
+                    activeTool === tool.id
+                      ? "text-emerald-200"
+                      : "text-white/80"
                   }`}
                 />
               </div>
@@ -62,7 +64,9 @@ export default function ToolSelector({
               </span>
             </div>
 
-            <h3 className="mt-5 text-lg font-semibold text-white">{tool.name}</h3>
+            <h3 className="mt-5 text-lg font-semibold text-white">
+              {tool.name}
+            </h3>
             <p className="mt-2 text-sm leading-6 text-white/62">
               {tool.description}
             </p>

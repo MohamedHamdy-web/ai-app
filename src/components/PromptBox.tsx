@@ -105,7 +105,7 @@ export default function PromptBox({
     <section className="rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,16,24,0.96),rgba(10,22,34,0.92))] p-3 shadow-2xl shadow-black/25 backdrop-blur-xl sm:p-4">
       <div className="relative rounded-[1.35rem] border border-white/10 bg-black/25 p-3">
         <textarea
-          className="min-h-[5rem] max-h-[14rem] w-full resize-y rounded-[1rem] border border-white/10 bg-white/[0.03] p-4 text-[15px] leading-7 text-white outline-none transition placeholder:text-white/28 focus:border-emerald-300/45 focus:bg-white/[0.045]"
+          className="min-h-20 max-h-56 w-full resize-y rounded-2xl border border-white/10 bg-white/3 p-4 text-[15px] leading-7 text-white outline-none transition placeholder:text-white/28 focus:border-emerald-300/45 focus:bg-white/4.5"
           placeholder={activeCopy.placeholder}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -117,7 +117,7 @@ export default function PromptBox({
             <button
               type="button"
               onClick={() => setMenuOpen((current) => !current)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/75 transition hover:bg-white/[0.08] hover:text-white"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-sm text-white/75 transition hover:bg-white/8 hover:text-white"
               aria-label="Choose model"
             >
               <Plus className="h-4 w-4" />
@@ -137,7 +137,7 @@ export default function PromptBox({
                       setActiveTool(tool.id);
                       setMenuOpen(false);
                     }}
-                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/78 transition hover:bg-white/8 hover:text-white"
                   >
                     <span>{tool.name}</span>
                     {tool.id === activeTool ? (

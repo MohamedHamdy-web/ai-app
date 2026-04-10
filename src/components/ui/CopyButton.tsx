@@ -20,7 +20,7 @@ export default function CopyButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/[0.1] hover:text-white ${className}`}
+      className={`inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white ${className}`}
     >
       {copied ? (
         <Check className="h-4 w-4 text-emerald-200" />
