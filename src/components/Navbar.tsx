@@ -14,7 +14,7 @@ export default function Navbar({
   const { isLoaded, isSignedIn } = useUser();
 
   return (
-    <nav className="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/[0.045] px-5 py-4 shadow-lg shadow-black/10 sm:flex-row sm:items-center sm:justify-between">
+    <nav className="sticky top-4 z-50 flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-white/[0.045] px-5 py-4 shadow-lg shadow-black/10 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         <button
           type="button"

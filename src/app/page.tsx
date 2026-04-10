@@ -509,7 +509,10 @@ export default function Home() {
       setIsSidebarOpen={setIsSidebarOpen}
     >
       <div className="flex min-h-[calc(100vh-6rem)] flex-col">
-        <Navbar onOpenSidebar={() => setIsSidebarOpen(true)} isSidebarOpen={isSidebarOpen} />
+        <Navbar
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+          isSidebarOpen={isSidebarOpen}
+        />
 
         <section className="mt-6 flex flex-1 flex-col gap-4">
           <div className="flex-1">

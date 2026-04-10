@@ -90,7 +90,7 @@ export default function Layout({
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ type: "tween", duration: 0.22 }}
-                className="fixed inset-y-0 left-0 z-40 w-[90%] max-w-[22rem] shrink-0 lg:static lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-[22rem]"
+                className="fixed inset-y-0 left-0 z-40 w-[90%] max-w-[22rem] shrink-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:w-[22rem]"
               >
                 <div className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/25 backdrop-blur-xl">
                   <div className="flex items-center justify-end border-b border-white/8 px-4 py-3 sm:px-5">
