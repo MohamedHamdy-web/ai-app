@@ -3,23 +3,12 @@
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
 import { motion } from "framer-motion";
+import { parseContent } from "@/utils/parseContent";
 
 type Props = {
   result: string;
   loading: boolean;
 };
-
-// 🔥 Split text + code blocks
-function parseContent(text: string) {
-  const parts = text.split(/```/);
-
-  return parts.map((part, index) => {
-    if (index % 2 === 1) {
-      return { type: "code", content: part };
-    }
-    return { type: "text", content: part };
-  });
-}
 
 export default function ResultBox({ result, loading }: Props) {
   const [displayedText, setDisplayedText] = useState("");

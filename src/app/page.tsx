@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
@@ -15,6 +21,7 @@ import History from "@/components/History";
 import { tools } from "@/data/tools";
 import type { ChatMessage, ChatSummary } from "@/lib/chat-types";
 import { getOrCreateGuestSessionId } from "@/lib/guest-session";
+import * as chatService from "@/services/chatService";
 
 function sortChats(chats: ChatSummary[]) {
   return [...chats].sort(
@@ -31,35 +38,12 @@ function upsertChatSummary(chats: ChatSummary[], nextChat: ChatSummary) {
 
 function getLatestAssistantMessageId(messages: ChatMessage[]) {
   return (
-    [...messages].reverse().find((message) => message.role === "assistant")?.id ??
-    null
+    [...messages].reverse().find((message) => message.role === "assistant")
+      ?.id ?? null
   );
 }
 
-async function readJsonResponse<T>(response: Response): Promise<T> {
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
-
-    if (contentType.includes("application/json")) {
-      const errorData = (await response.json()) as { error?: string };
-      message = errorData.error || message;
-    } else {
-      const errorText = await response.text();
-      message = errorText || message;
-    }
-
-    throw new Error(message);
-  }
-
-  if (!contentType.includes("application/json")) {
-    const preview = (await response.text()).slice(0, 120);
-    throw new Error(`Expected JSON response, received: ${preview}`);
-  }
-
-  return (await response.json()) as T;
-}
+// use chatService.* helpers for API calls
 
 export default function Home() {
   const { isLoaded } = useUser();
@@ -78,15 +62,15 @@ export default function Home() {
   const [chatsLoading, setChatsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [pendingAnimatedAssistantId, setPendingAnimatedAssistantId] =
-    useState<string | null>(null);
+  const [pendingAnimatedAssistantId, setPendingAnimatedAssistantId] = useState<
+    string | null
+  >(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] =
     useState(false);
 
-  const selectedChat =
-    chats.find((chat) => chat.id === selectedChatId) ?? null;
+  const selectedChat = chats.find((chat) => chat.id === selectedChatId) ?? null;
   const currentMessages = selectedChatId
-    ? messagesByChatId[selectedChatId] ?? []
+    ? (messagesByChatId[selectedChatId] ?? [])
     : [];
   const ownerReady = isLoaded && guestSessionId !== null;
 
@@ -163,16 +147,10 @@ export default function Home() {
     setMessagesLoading(true);
 
     try {
-      const res = await fetch(
-        `/api/chats/${chatId}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
-        {
-          cache: "no-store",
-        },
+      const data = await chatService.fetchChat(
+        chatId,
+        guestSessionId ?? undefined,
       );
-      const data = await readJsonResponse<{
-        chat: ChatSummary;
-        messages: ChatMessage[];
-      }>(res);
 
       setMessagesByChatId((prev) => ({
         ...prev,
@@ -204,17 +182,14 @@ export default function Home() {
     setChatsLoading(true);
 
     try {
-      const res = await fetch(
-        `/api/chats?guestSessionId=${encodeURIComponent(guestSessionId)}`,
-        {
-          cache: "no-store",
-        },
+      const nextChats = await chatService.fetchChats(
+        guestSessionId ?? undefined,
       );
-      const data = await readJsonResponse<{ chats: ChatSummary[] }>(res);
-      const nextChats = data.chats ?? [];
-      const nextSelectedId = nextChats.some((chat) => chat.id === selectedChatId)
+      const nextSelectedId = nextChats.some(
+        (chat) => chat.id === selectedChatId,
+      )
         ? selectedChatId
-        : nextChats[0]?.id ?? null;
+        : (nextChats[0]?.id ?? null);
 
       setChats(nextChats);
       setSelectedChatId(nextSelectedId);
@@ -237,37 +212,27 @@ export default function Home() {
     void fetchChats();
   }, [ownerReady, guestSessionId]);
 
-  const createChat = useCallback(async (toolId: string) => {
-    if (!guestSessionId) {
-      throw new Error("Guest session is not ready yet");
-    }
+  const createChat = useCallback(
+    async (toolId: string) => {
+      if (!guestSessionId) {
+        throw new Error("Guest session is not ready yet");
+      }
 
-    const res = await fetch("/api/chats", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        guestSessionId,
-        toolId,
-      }),
-    });
-    const data = await readJsonResponse<{
-      chat: ChatSummary;
-      messages: ChatMessage[];
-    }>(res);
+      const data = await chatService.createChat(guestSessionId, toolId);
 
-    setChats((prev) => upsertChatSummary(prev, data.chat));
-    setMessagesByChatId((prev) => ({
-      ...prev,
-      [data.chat.id]: data.messages,
-    }));
-    setSelectedChatId(data.chat.id);
-    setPendingAnimatedAssistantId(null);
-    setActiveTool(data.chat.toolId);
+      setChats((prev) => upsertChatSummary(prev, data.chat));
+      setMessagesByChatId((prev) => ({
+        ...prev,
+        [data.chat.id]: data.messages,
+      }));
+      setSelectedChatId(data.chat.id);
+      setPendingAnimatedAssistantId(null);
+      setActiveTool(data.chat.toolId);
 
-    return data.chat;
-  }, [guestSessionId]);
+      return data.chat;
+    },
+    [guestSessionId],
+  );
 
   useEffect(() => {
     if (
@@ -295,7 +260,14 @@ export default function Home() {
       .finally(() => {
         isCreatingInitialChatRef.current = false;
       });
-  }, [activeTool, chats.length, chatsLoading, createChat, ownerReady, selectedChatId]);
+  }, [
+    activeTool,
+    chats.length,
+    chatsLoading,
+    createChat,
+    ownerReady,
+    selectedChatId,
+  ]);
 
   const handleCreateChat = async () => {
     try {
@@ -333,21 +305,12 @@ export default function Home() {
       }));
       setSendingMessage(true);
 
-      const res = await fetch(`/api/chats/${resolvedChatId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          guestSessionId,
-          toolId: activeTool,
-          content: input,
-        }),
-      });
-      const data = await readJsonResponse<{
-        chat: ChatSummary;
-        messages: ChatMessage[];
-      }>(res);
+      const data = await chatService.sendMessage(
+        resolvedChatId,
+        guestSessionId,
+        activeTool,
+        input,
+      );
       const latestAssistantMessageId = getLatestAssistantMessageId(
         data.messages,
       );
@@ -407,20 +370,11 @@ export default function Home() {
 
     try {
       const renamePromise = (async () => {
-        const res = await fetch(`/api/chats/${chat.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            guestSessionId,
-            title: proposedTitle,
-          }),
-        });
-        const data = await readJsonResponse<{
-          chat: ChatSummary;
-          messages: ChatMessage[];
-        }>(res);
+        const data = await chatService.renameChat(
+          chat.id,
+          guestSessionId,
+          proposedTitle,
+        );
 
         setChats((prev) => upsertChatSummary(prev, data.chat));
         setMessagesByChatId((prev) => ({
@@ -453,13 +407,7 @@ export default function Home() {
 
     try {
       const deletePromise = (async () => {
-        const res = await fetch(
-          `/api/chats/${chat.id}?guestSessionId=${encodeURIComponent(guestSessionId)}`,
-          {
-            method: "DELETE",
-          },
-        );
-        await readJsonResponse<{ success: boolean }>(res);
+        await chatService.deleteChat(chat.id, guestSessionId);
 
         const remainingChats = chatsRef.current.filter(
           (item) => item.id !== chat.id,

@@ -1,37 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 import type { ChatMessage } from "@/lib/chat-types";
-
-function parseContent(text: string) {
-  const parts = text.split(/```/);
-
-  return parts.map((part, index) => {
-    if (index % 2 === 1) {
-      const trimmedPart = part.trim();
-      const newlineIndex = trimmedPart.indexOf("\n");
-
-      if (newlineIndex === -1) {
-        return { type: "code", content: trimmedPart, language: "" };
-      }
-
-      const firstLine = trimmedPart.slice(0, newlineIndex).trim();
-      const rest = trimmedPart.slice(newlineIndex + 1);
-      const languagePattern = /^[a-zA-Z0-9_+-]+$/;
-
-      if (languagePattern.test(firstLine)) {
-        return { type: "code", content: rest, language: firstLine };
-      }
-
-      return { type: "code", content: trimmedPart, language: "" };
-    }
-
-    return { type: "text", content: part };
-  });
-}
+import AssistantMessageContent from "@/components/AssistantMessageContent";
+import CopyButton from "@/components/ui/CopyButton";
 
 type Props = {
   chatTitle?: string | null;
@@ -52,141 +27,7 @@ function formatMessageTime(value: string) {
   }).format(new Date(value));
 }
 
-type AssistantMessageContentProps = {
-  content: string;
-  activeTool: string;
-  animate: boolean;
-  messageId: string;
-  messageIndex: number;
-  copiedCodeIndex: string | null;
-  onCodeCopy: (content: string, index: string) => void;
-  onAnimationStart: (messageId: string) => void;
-};
-
-function AssistantMessageContent({
-  content,
-  activeTool,
-  animate,
-  messageId,
-  messageIndex,
-  copiedCodeIndex,
-  onCodeCopy,
-  onAnimationStart,
-}: AssistantMessageContentProps) {
-  const hasStartedAnimationRef = useRef(false);
-  const [isAnimating, setIsAnimating] = useState(animate);
-  const [visibleCharacterCount, setVisibleCharacterCount] = useState(() =>
-    animate ? 0 : content.length,
-  );
-  const isComplete = visibleCharacterCount >= content.length;
-
-  useEffect(() => {
-    if (!animate || hasStartedAnimationRef.current) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      hasStartedAnimationRef.current = true;
-      setIsAnimating(true);
-      setVisibleCharacterCount(0);
-      onAnimationStart(messageId);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [animate, messageId, onAnimationStart]);
-
-  useEffect(() => {
-    if (!isAnimating || isComplete) {
-      return;
-    }
-
-    const typingStep = Math.max(1, Math.ceil(content.length / 140));
-    const timeoutId = window.setTimeout(() => {
-      setVisibleCharacterCount((currentCount) =>
-        Math.min(currentCount + typingStep, content.length),
-      );
-    }, 18);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [content.length, isAnimating, isComplete, visibleCharacterCount]);
-
-  useEffect(() => {
-    if (!isAnimating || isComplete) {
-      return;
-    }
-
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: "auto",
-    });
-  }, [isAnimating, isComplete, visibleCharacterCount]);
-
-  if (isAnimating && !isComplete) {
-    return (
-      <p className="whitespace-pre-line text-[15px] leading-7 text-white/84">
-        {content.slice(0, visibleCharacterCount)}
-        <span className="ml-0.5 inline-block h-5 w-[2px] animate-pulse align-middle bg-white/60" />
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {parseContent(content).map((block, index) => {
-        const codeBlockKey = `${messageId}-${messageIndex}-${index}`;
-
-        if (block.type === "code") {
-          return (
-            <div
-              key={codeBlockKey}
-              className="overflow-x-auto rounded-[1.25rem] border border-white/10 bg-[#07131f] p-4 text-sm text-emerald-200"
-            >
-              {activeTool === "code" || block.language ? (
-                <div className="mb-3 flex items-center justify-between gap-3 border-b border-white/8 pb-3">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
-                    {block.language || "Code"}
-                  </div>
-
-                  {activeTool === "code" ? (
-                    <button
-                      type="button"
-                      onClick={() => onCodeCopy(block.content, codeBlockKey)}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-[#10202f] px-2.5 py-1.5 text-[11px] font-medium text-white/80 transition hover:bg-[#163047] hover:text-white"
-                    >
-                      {copiedCodeIndex === codeBlockKey ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-200" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                      {copiedCodeIndex === codeBlockKey ? "Copied" : "Copy"}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <pre>
-                <code>{block.content}</code>
-              </pre>
-            </div>
-          );
-        }
-
-        return (
-          <p
-            key={codeBlockKey}
-            className="whitespace-pre-line text-[15px] leading-7 text-white/84"
-          >
-            {block.content}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
+// AssistantMessageContent has been extracted to its own file
 
 export default function ResultPanel({
   chatTitle,
@@ -237,18 +78,7 @@ export default function ResultPanel({
 
         <div className="flex items-center gap-2">
           {messages.length > 0 ? (
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/[0.1] hover:text-white"
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-emerald-200" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
+            <CopyButton copied={copied} onClick={handleCopy} />
           ) : null}
         </div>
       </div>
@@ -348,11 +178,9 @@ export default function ResultPanel({
                 </div>
               </div>
             ) : null}
-
           </div>
         ) : null}
       </div>
-
     </motion.section>
   );
 }
