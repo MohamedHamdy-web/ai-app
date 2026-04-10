@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquarePlus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser, useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import UserPlan from "./user-plan";
 
 export default function Layout({
   sidebar,
@@ -37,6 +39,49 @@ export default function Layout({
     user?.primaryEmailAddress?.emailAddress ||
     user?.emailAddresses[0]?.emailAddress ||
     "";
+  const [appUser, setAppUser] = useState<{ id: string; plan: string } | null>(
+    null,
+  );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+  const clerk = useClerk();
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) {
+      setAppUser(null);
+      return;
+    }
+
+    let mounted = true;
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/me");
+        const data = await res.json();
+        if (!mounted) return;
+        setAppUser(data.user ?? null);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_80%_10%,_rgba(34,211,238,0.12),_transparent_26%),linear-gradient(135deg,_#06131c_0%,_#0d1724_48%,_#142235_100%)] text-white">
@@ -109,18 +154,68 @@ export default function Layout({
                   <div className="border-t border-white/8 p-4 sm:p-5">
                     {isLoaded && isSignedIn ? (
                       <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
-                        <div className="flex items-center gap-3">
+                        <div
+                          className="flex items-center gap-3 relative"
+                          ref={menuRef}
+                        >
                           <div className="rounded-full border border-white/15 bg-white/[0.04] p-1">
                             <UserButton />
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-white">
-                              {userName}
-                            </p>
-                            <p className="truncate text-xs text-white/55">
-                              {userEmail}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setMenuOpen((s) => !s)}
+                              className="text-left"
+                              aria-expanded={menuOpen}
+                              aria-controls="account-menu"
+                            >
+                              <p className="truncate text-sm font-semibold text-white">
+                                {userName}
+                              </p>
+                              <UserPlan />
+                            </button>
                           </div>
+
+                          {menuOpen ? (
+                            <div
+                              id="account-menu"
+                              className="absolute bottom-full right-0 mb-3 w-48 rounded-[0.75rem] border border-white/8 bg-white/[0.035] p-2 shadow-2xl shadow-black/30"
+                            >
+                              <ul className="flex flex-col">
+                                <li>
+                                  <button
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    onClick={() => router.push("/account")}
+                                  >
+                                    Account settings
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    onClick={() => router.push("/plans")}
+                                  >
+                                    Upgrade plan
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.02]"
+                                    onClick={async () => {
+                                      try {
+                                        await clerk.signOut();
+                                        router.refresh();
+                                      } catch (err) {
+                                        console.error(err);
+                                      }
+                                    }}
+                                  >
+                                    Sign out
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     ) : (

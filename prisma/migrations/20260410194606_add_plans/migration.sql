@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Chat" ALTER COLUMN "updatedAt" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "User" ALTER COLUMN "quotaResetAt" SET DATA TYPE TIMESTAMP(3);
