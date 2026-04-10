@@ -54,6 +54,9 @@ export default function Home() {
 
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState("text");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
+  );
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messagesByChatId, setMessagesByChatId] = useState<
@@ -112,9 +115,17 @@ export default function Home() {
     });
     window.addEventListener("resize", updatePageScrollState);
 
+    function handleResizeForSidebar() {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      }
+    }
+    window.addEventListener("resize", handleResizeForSidebar);
+
     return () => {
       window.removeEventListener("scroll", updatePageScrollState);
       window.removeEventListener("resize", updatePageScrollState);
+      window.removeEventListener("resize", handleResizeForSidebar);
     };
   }, [updatePageScrollState]);
 
@@ -494,9 +505,11 @@ export default function Home() {
         />
       }
       onCreateChat={handleCreateChat}
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
     >
       <div className="flex min-h-[calc(100vh-6rem)] flex-col">
-        <Navbar />
+        <Navbar onOpenSidebar={() => setIsSidebarOpen(true)} isSidebarOpen={isSidebarOpen} />
 
         <section className="mt-6 flex flex-1 flex-col gap-4">
           <div className="flex-1">
