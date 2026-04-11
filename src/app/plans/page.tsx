@@ -1,11 +1,24 @@
 "use client";
 
 import { PricingTable } from "@clerk/nextjs";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function PlansPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen p-8" style={{ background: "#0d1f1f" }}>
+      {/* Back button */}
+      <button
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors mb-8 cursor-pointer"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+
+      {/* Header */}
       <div className="text-center mb-12">
         <div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
@@ -19,7 +32,7 @@ export default function PlansPage() {
           Simple, transparent pricing
         </div>
         <h1 className="text-5xl font-extrabold mb-4 text-white">
-          Choose the plan that`s{" "}
+          Choose the plan that&apos;s{" "}
           <span
             style={{
               background: "linear-gradient(to right, #7c3aed, #6366f1)",

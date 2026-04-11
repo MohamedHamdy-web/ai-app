@@ -5,14 +5,8 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    if (!clerkClient?.billing?.getPlans) {
-      return NextResponse.json(
-        { error: "Clerk billing not enabled" },
-        { status: 501 },
-      );
-    }
-
-    const plans = await clerkClient.billing.getPlans();
+    const client = await clerkClient();
+    const plans = await client.billing.getPlanList();
     return NextResponse.json({ plans });
   } catch (err) {
     console.error(err);
