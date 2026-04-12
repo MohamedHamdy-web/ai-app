@@ -73,6 +73,7 @@ export default function PromptBox({
 
     if (wasSent) {
       setPrompt("");
+      window.dispatchEvent(new Event("quota:refresh")); // Notify quota bar to refresh
     }
   };
 

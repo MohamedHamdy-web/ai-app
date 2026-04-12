@@ -4,6 +4,7 @@ import { MessageRole, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getToolMetadata } from "@/lib/chat-tools";
 import type { ChatMessage, ChatSummary } from "@/lib/chat-types";
+import { generateAIResponse } from "./openai";
 
 type ChatOwner =
   | {
@@ -146,21 +147,28 @@ export function buildAiMessages(
   ];
 }
 
-export function buildChatTitle(prompt: string) {
-  const collapsedPrompt = prompt
-    .replace(/[`#>*_~[\]]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!collapsedPrompt) {
-    return "New chat";
+export async function buildChatTitle(prompt: string): Promise<string> {
+  try {
+    const title = await generateAIResponse([
+      {
+        role: "system",
+        content:
+          "You are a title generator. Generate a short, concise title (max 5 words) for a chat based on the user's first message. Reply with ONLY the title, no quotes, no punctuation at the end, no explanation.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ]);
+    return title.trim().slice(0, 60);
+  } catch {
+    // fallback to truncation if AI fails
+    const collapsed = prompt
+      .replace(/[`#>*_~[\]]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!collapsed) return "New chat";
+    const clipped = collapsed.slice(0, 64).trim();
+    return clipped.length < collapsed.length ? `${clipped}...` : clipped;
   }
-
-  const clippedPrompt = collapsedPrompt.slice(0, 64).trim();
-
-  if (clippedPrompt.length < collapsedPrompt.length) {
-    return `${clippedPrompt}...`;
-  }
-
-  return clippedPrompt;
 }

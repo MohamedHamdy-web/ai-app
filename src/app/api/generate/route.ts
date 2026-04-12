@@ -9,40 +9,104 @@ type GenerateBody = {
   prompt?: string;
 };
 
+const PLAN_LIMITS: Record<string, number> = {
+  free: 1000,
+  standard: 1000,
+  pro: 2000,
+  enterprise: 999999,
+};
+
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-
-    // 👤 find user
+    const { userId, has } = await auth();
     const body = (await request.json()) as GenerateBody;
     const prompt = body.prompt?.trim();
 
     if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Prompt is required" },
+        { status: 400 },
+      );
     }
 
-    const result = await generateAIResponse([
-      {
-        role: "user",
-        content: prompt,
-      },
-    ]);
-
     if (userId) {
-      const user = await prisma.user.upsert({
+      // Get or create user
+      let user = await prisma.user.upsert({
         where: { clerkId: userId },
         update: {},
         create: { clerkId: userId },
       });
 
-      await prisma.history.create({
-        data: {
-          prompt,
-          result,
-          userId: user.id,
-        },
-      });
+      // Check if quota needs reset (monthly)
+      const now = new Date();
+      const resetAt = user.quotaResetAt;
+
+      if (!resetAt || now > resetAt) {
+        const nextReset = new Date();
+        nextReset.setMonth(nextReset.getMonth() + 1);
+
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            quotaUsed: 0,
+            quotaResetAt: nextReset,
+          },
+        });
+      }
+
+      // Read plan from Clerk directly
+      const planKey = has({ plan: "enterprise" })
+        ? "enterprise"
+        : has({ plan: "pro" })
+          ? "pro"
+          : "free";
+
+      const quotaLimit = PLAN_LIMITS[planKey] ?? 1000;
+
+      // Sync quota limit to DB if it changed
+      if (user.quotaLimit !== quotaLimit) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { quotaLimit },
+        });
+      }
+
+      // Check if user exceeded quota
+      if (user.quotaUsed >= quotaLimit) {
+        return NextResponse.json(
+          {
+            error: "quota_exceeded",
+            message: `You've used all ${quotaLimit} messages for this month. Upgrade your plan to get more.`,
+            quotaUsed: user.quotaUsed,
+            quotaLimit,
+          },
+          { status: 429 },
+        );
+      }
+
+      // Generate AI response
+      const result = await generateAIResponse([
+        { role: "user", content: prompt },
+      ]);
+
+      // Save history + increment quota
+      await Promise.all([
+        prisma.history.create({
+          data: { prompt, result, userId: user.id },
+        }),
+        prisma.user.update({
+          where: { id: user.id },
+          data: { quotaUsed: { increment: 1 } },
+        }),
+      ]);
+
+      return NextResponse.json({ result });
     }
+
+    // Guest user — no quota tracking
+    const result = await generateAIResponse([
+      { role: "user", content: prompt },
+    ]);
 
     return NextResponse.json({ result });
   } catch (error) {

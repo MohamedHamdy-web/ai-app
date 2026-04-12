@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 
 import {
   buildAiMessages,
@@ -23,6 +24,13 @@ type SendMessageBody = {
   content?: string;
   toolId?: string;
   guestSessionId?: string;
+};
+
+const PLAN_LIMITS: Record<string, number> = {
+  free: 1000,
+  standard: 1000,
+  pro: 2000,
+  enterprise: 999999,
 };
 
 export async function POST(request: Request, { params }: Params) {
@@ -56,6 +64,50 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
+    // Check quota for signed in users
+    const { userId, has } = await auth();
+    if (userId) {
+      const planKey = has({ plan: "enterprise" })
+        ? "enterprise"
+        : has({ plan: "pro" })
+          ? "pro"
+          : "free";
+
+      const quotaLimit = PLAN_LIMITS[planKey] ?? 1000;
+
+      const user = await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { quotaUsed: true, quotaResetAt: true },
+      });
+
+      if (user) {
+        // Reset quota monthly if needed
+        const now = new Date();
+        if (!user.quotaResetAt || now > user.quotaResetAt) {
+          const nextReset = new Date();
+          nextReset.setMonth(nextReset.getMonth() + 1);
+          await prisma.user.update({
+            where: { clerkId: userId },
+            data: { quotaUsed: 0, quotaResetAt: nextReset },
+          });
+          user.quotaUsed = 0;
+        }
+
+        // Block if quota exceeded
+        if (user.quotaUsed >= quotaLimit) {
+          return NextResponse.json(
+            {
+              error: "quota_exceeded",
+              message: `You've used all ${quotaLimit === 999999 ? "unlimited" : quotaLimit} messages for this month. Upgrade your plan to get more.`,
+              quotaUsed: user.quotaUsed,
+              quotaLimit,
+            },
+            { status: 429 },
+          );
+        }
+      }
+    }
+
     const nextToolId = body.toolId ?? existingChat.toolId;
     const aiMessages = buildAiMessages(
       nextToolId,
@@ -74,7 +126,7 @@ export async function POST(request: Request, { params }: Params) {
           toolId: nextToolId,
           title:
             existingChat.messages.length === 0
-              ? buildChatTitle(content)
+              ? await buildChatTitle(content)
               : existingChat.title,
         },
       }),
@@ -93,6 +145,25 @@ export async function POST(request: Request, { params }: Params) {
         },
       }),
     ]);
+
+    // Increment quota after successful message
+    if (userId) {
+      const planKey = has({ plan: "enterprise" })
+        ? "enterprise"
+        : has({ plan: "pro" })
+          ? "pro"
+          : "free";
+
+      const quotaLimit = PLAN_LIMITS[planKey] ?? 1000;
+
+      await prisma.user.update({
+        where: { clerkId: userId },
+        data: {
+          quotaUsed: { increment: 1 },
+          quotaLimit,
+        },
+      });
+    }
 
     const refreshedChat = await findOwnedChat(existingChat.id, owner);
 
