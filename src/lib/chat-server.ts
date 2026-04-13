@@ -1,5 +1,4 @@
 import { auth } from "@clerk/nextjs/server";
-import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getToolMetadata } from "@/lib/chat-tools";
@@ -16,13 +15,22 @@ type ChatOwner =
       guestSessionId: string;
     };
 
-type ChatWithMessages = Prisma.ChatGetPayload<{
-  include: {
-    messages: {
-      orderBy: { createdAt: "asc" };
-    };
-  };
-}>;
+type ChatWithMessages = {
+  id: string;
+  title: string;
+  toolId: string;
+  guestSessionId: string | null;
+  userId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  messages: {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    createdAt: Date;
+    chatId: string;
+  }[];
+};
 
 export async function resolveChatOwner(options?: {
   guestSessionId?: string;
@@ -70,7 +78,7 @@ export async function resolveChatOwner(options?: {
   } satisfies ChatOwner;
 }
 
-export function buildChatOwnerWhere(owner: ChatOwner): Prisma.ChatWhereInput {
+export function buildChatOwnerWhere(owner: ChatOwner) {
   if (owner.kind === "user") {
     return { userId: owner.userDbId };
   }
@@ -162,7 +170,6 @@ export async function buildChatTitle(prompt: string): Promise<string> {
     ]);
     return title.trim().slice(0, 60);
   } catch {
-    // fallback to truncation if AI fails
     const collapsed = prompt
       .replace(/[`#>*_~[\]]/g, "")
       .replace(/\s+/g, " ")
