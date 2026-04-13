@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hambola AI
+
+An AI-powered content generation SaaS built with Next.js 16, featuring multiple AI tools, chat history, subscription plans, and usage quota management.
+
+## Features
+
+- 🤖 Multiple AI tools (Text Generator, Code, Captions)
+- 💬 Persistent chat history with auto-generated titles
+- 👤 Guest mode — use without signing in
+- 🔐 Authentication with Clerk (Google + Email)
+- 💳 Subscription plans with Clerk Billing
+- 📊 Usage quota tracking per plan with monthly reset
+- 🔔 Real-time quota bar with upgrade prompts
+- 📱 Responsive design with collapsible sidebar
+- ✨ Smooth animations with Framer Motion
+- 🌙 Dark themed UI
+
+## Plans
+
+| Plan       | Messages/Month |
+| ---------- | -------------- |
+| Free       | 1,000          |
+| Pro        | 2,000          |
+| Enterprise | Unlimited      |
+
+## Tech Stack
+
+**Frontend**
+
+- Next.js 16 (App Router, Turbopack)
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+- Lucide React
+- Sonner (toasts)
+
+**Backend**
+
+- Prisma ORM v7
+- PostgreSQL (Neon)
+- OpenAI API
+- Clerk (Authentication + Billing)
+- Resend (Email)
+
+**Deployment**
+
+- Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (Neon recommended)
+- Clerk account with Billing enabled
+- OpenAI API key
+- Resend account
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/hambola-ai.git
+cd hambola-ai
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Set up environment variables — create a `.env` file:
+
+```env
+DATABASE_URL=
+DIRECT_URL=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+OPENAI_API_KEY=
+RESEND_API_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+4. Run database migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+5. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+src/
+├── app/
+│ ├── (auth)/ # Sign in & Sign up pages
+│ ├── account/ # Account settings
+│ ├── plans/ # Pricing & subscription page
+│ └── page.tsx # Main chat interface
+├── components/ # Reusable components
+│ ├── Layout.tsx # App shell with sidebar
+│ ├── PromptBox.tsx # Message input
+│ ├── ResultPanel.tsx # Chat messages display
+│ ├── History.tsx # Chat history sidebar
+│ └── QuotaBar.tsx # Usage quota display
+├── services/
+│ └── chatService.ts # API call helpers
+├── lib/
+│ ├── chat-server.ts # Server-side chat utilities
+│ ├── openai.ts # OpenAI client
+│ ├── prisma.ts # Prisma client
+│ └── chat-types.ts # TypeScript types
+└── utils/
+└── fetchHelpers.ts # Fetch utilities
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+- **User** — Clerk user with quota tracking and plan info
+- **Chat** — Conversation with title and tool selection
+- **Message** — Individual messages with role (user/assistant)
+- **History** — Generation history for logged in users
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
