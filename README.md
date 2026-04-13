@@ -2,6 +2,8 @@
 
 An AI-powered content generation SaaS built with Next.js 16, featuring multiple AI tools, chat history, subscription plans, and usage quota management.
 
+🔗 **Live Demo:**(https://ai-app-nine-mauve.vercel.app)
+
 ## Features
 
 - 🤖 Multiple AI tools (Text Generator, Code, Captions)
