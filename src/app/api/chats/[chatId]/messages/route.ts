@@ -11,7 +11,7 @@ import {
 } from "@/lib/chat-server";
 import { prisma } from "@/lib/prisma";
 import { generateAIResponse } from "@/lib/openai";
-
+import { MessageRole } from "@prisma/client";
 export const runtime = "nodejs";
 
 type Params = {
@@ -111,10 +111,12 @@ export async function POST(request: Request, { params }: Params) {
     const nextToolId = body.toolId ?? existingChat.toolId;
     const aiMessages = buildAiMessages(
       nextToolId,
-      existingChat.messages.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
+      existingChat.messages.map(
+        (message: { role: MessageRole; content: string }) => ({
+          role: message.role,
+          content: message.content,
+        }),
+      ),
       content,
     );
     const assistantContent = await generateAIResponse(aiMessages);
