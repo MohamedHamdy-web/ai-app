@@ -335,13 +335,28 @@ export default function Home() {
       setSelectedChatId(resolvedChatId);
       setActiveTool(data.chat.toolId);
 
+      // Refresh quota bar after successful message
+      window.dispatchEvent(new Event("quota:refresh"));
+
       return true;
     } catch (error) {
-      console.error(error);
+      // Handle quota exceeded
+      if (error instanceof Error) {
+        const err = error as Error & { code?: string };
+        if (err.code === "quota_exceeded") {
+          toast.error(err.message, {
+            action: {
+              label: "Upgrade",
+              onClick: () => (window.location.href = "/plans"),
+            },
+          });
+        } else {
+          toast.error("Failed to send message. Please try again.");
+        }
+      }
 
       if (chatId) {
         const failedChatId = chatId;
-
         setMessagesByChatId((prev) => ({
           ...prev,
           [failedChatId]: (prev[failedChatId] ?? []).filter(

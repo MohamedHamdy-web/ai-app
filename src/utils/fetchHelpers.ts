@@ -3,16 +3,23 @@ export async function readJsonResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
+    let errorCode = "";
 
     if (contentType.includes("application/json")) {
-      const errorData = (await response.json()) as { error?: string };
-      message = errorData.error || message;
+      const errorData = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      errorCode = errorData.error ?? "";
+      message = errorData.message || errorData.error || message;
     } else {
       const errorText = await response.text();
       message = errorText || message;
     }
 
-    throw new Error(message);
+    const error = new Error(message) as Error & { code?: string };
+    error.code = errorCode;
+    throw error;
   }
 
   if (!contentType.includes("application/json")) {
