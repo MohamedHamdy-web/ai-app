@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { MessageRole, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getToolMetadata } from "@/lib/chat-tools";
@@ -95,7 +95,7 @@ export async function findOwnedChat(chatId: string, owner: ChatOwner) {
 export function serializeChat(chat: ChatWithMessages): ChatSummary {
   const latestUserMessage = [...chat.messages]
     .reverse()
-    .find((message) => message.role === MessageRole.user);
+    .find((message) => message.role === "user");
   const preview = latestUserMessage?.content
     .replace(/```[\s\S]*?```/g, "")
     .replace(/\s+/g, " ")
@@ -126,7 +126,7 @@ export function serializeMessage(
 
 export function buildAiMessages(
   toolId: string,
-  history: Array<{ role: MessageRole; content: string }>,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
   content: string,
 ) {
   const tool = getToolMetadata(toolId);
