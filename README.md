@@ -1,4 +1,4 @@
-# Hambola AI
+# Velox
 
 An AI-powered content generation SaaS built with Next.js 16, featuring multiple AI tools, chat history, subscription plans, and usage quota management.
 
@@ -63,8 +63,8 @@ An AI-powered content generation SaaS built with Next.js 16, featuring multiple 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/hambola-ai.git
-cd hambola-ai
+git clone https://github.com/YOUR_USERNAME/velox-ai.git
+cd velox-ai
 ```
 
 2. Install dependencies:

@@ -29,7 +29,7 @@ export default function Navbar({
 
         <div>
           <Link href="/" className="text-xl font-semibold tracking-tight">
-            Hambola Ai
+            Velox
           </Link>
           <p className="mt-1 text-sm text-white/60">
             Create faster with a cleaner prompt-to-result workspace.

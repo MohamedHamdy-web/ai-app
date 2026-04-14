@@ -36,7 +36,7 @@ export default function AuthShell({
             href="/"
             className="text-lg font-semibold tracking-[0.2em] uppercase"
           >
-            Hambola Ai
+            Velox
           </Link>
           <Link
             href="/"

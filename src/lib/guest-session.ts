@@ -1,13 +1,18 @@
-const GUEST_SESSION_STORAGE_KEY = "hambola-ai-guest-session-id";
-const LEGACY_GUEST_SESSION_STORAGE_KEY = "ai-app-guest-session-id";
+const GUEST_SESSION_STORAGE_KEY = "velox-ai-guest-session-id";
+const LEGACY_GUEST_SESSION_STORAGE_KEYS = [
+  "hambola-ai-guest-session-id",
+  "ai-app-guest-session-id",
+] as const;
 
 export function getOrCreateGuestSessionId() {
   const existingSessionId =
     window.localStorage.getItem(GUEST_SESSION_STORAGE_KEY) ??
-    window.localStorage.getItem(LEGACY_GUEST_SESSION_STORAGE_KEY);
+    LEGACY_GUEST_SESSION_STORAGE_KEYS.map((key) =>
+      window.localStorage.getItem(key),
+    ).find(Boolean);
 
   if (existingSessionId) {
-    // Preserve older guest sessions after the app rename.
+    // Preserve guest sessions created before previous app names.
     window.localStorage.setItem(GUEST_SESSION_STORAGE_KEY, existingSessionId);
   }
 

@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hambola Ai",
-  description: "Hambola Ai is a cleaner prompt-to-result workspace.",
+  title: "Velox",
+  description: "Velox is a cleaner prompt-to-result workspace.",
 };
 
 export default function RootLayout({
